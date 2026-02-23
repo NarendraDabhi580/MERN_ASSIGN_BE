@@ -9,7 +9,9 @@ export const addToCart = async (req, res) => {
     const { productId, quantity } = req.body;
 
     if (!productId || !quantity) {
-      return res.status(400).json({ message: "productId and quantity required" });
+      return res
+        .status(400)
+        .json({ message: "productId and quantity required" });
     }
 
     const product = await Product.findById(productId);
@@ -22,11 +24,11 @@ export const addToCart = async (req, res) => {
     if (!cart) {
       cart = await Cart.create({
         user: req.user,
-        items: [{ product: productId, quantity }]
+        items: [{ product: productId, quantity }],
       });
     } else {
       const itemIndex = cart.items.findIndex(
-        (item) => item.product.toString() === productId
+        (item) => item.product.toString() === productId,
       );
 
       if (itemIndex > -1) {
@@ -62,7 +64,7 @@ export const updateCartItem = async (req, res) => {
     }
 
     const item = cart.items.find(
-      (item) => item.product.toString() === productId
+      (item) => item.product.toString() === productId,
     );
 
     if (!item) {
@@ -91,7 +93,7 @@ export const removeCartItem = async (req, res) => {
     }
 
     cart.items = cart.items.filter(
-      (item) => item.product.toString() !== productId
+      (item) => item.product.toString() !== productId,
     );
 
     await cart.save();
@@ -107,11 +109,18 @@ export const removeCartItem = async (req, res) => {
 export const getCart = async (req, res) => {
   try {
     const cart = await Cart.findOne({ user: req.user }).populate(
-      "items.product"
+      "items.product",
     );
 
     if (!cart) {
       return res.json({ items: [] });
+    }
+
+    // Remove items whose product was deleted from the DB (populate returns null)
+    const validItems = cart.items.filter((item) => item.product !== null);
+    if (validItems.length !== cart.items.length) {
+      cart.items = validItems;
+      await cart.save();
     }
 
     res.json(cart);
